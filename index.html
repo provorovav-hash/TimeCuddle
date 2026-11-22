@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#171c3f">
+  <title>ВремяОбнимашки: Хранители Снов</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <main class="stage" id="stage" aria-label="Игра ВремяОбнимашки: Хранители Снов">
+      <canvas id="gameCanvas" width="1280" height="720"></canvas>
+
+      <div id="hud" class="hud is-hidden" aria-live="polite">
+        <div class="hud-top">
+          <div class="level-pill">
+            <span class="level-pill__moon" aria-hidden="true">☾</span>
+            <span class="level-pill__text">
+              <span id="dreamNumber">Сон 1</span>
+              <strong id="levelTitle">Остров разбросанных носков</strong>
+            </span>
+            <span class="dream-dots" id="dreamDots" aria-label="Прогресс снов">
+              <i class="dream-dot is-active"></i><i class="dream-dot"></i><i class="dream-dot"></i><i class="dream-dot"></i>
+            </span>
+          </div>
+
+          <div class="objective-card" id="objectiveCard">
+            <span class="objective-card__spark" aria-hidden="true">✦</span>
+            <span id="objectiveText">Найдите волшебный фонарик</span>
+            <span class="objective-card__progress" id="objectiveProgress"></span>
+          </div>
+
+          <div class="hud-actions">
+            <div class="color-pill is-hidden" id="colorPill" title="Цвет волшебного луча">
+              <i class="color-pill__dot" id="colorDot"></i>
+              <span id="colorName">Зелёный</span>
+            </div>
+            <div class="firefly-pill" id="fireflyPill" title="Светлячки-подсказки">
+              <span class="firefly-icon" aria-hidden="true"></span>
+              <span id="fireflyCount">0 / 3</span>
+            </div>
+            <button class="round-btn" id="voiceBtn" type="button" aria-label="Озвучка" title="Озвучка">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="wave" d="M16 8.2a5 5 0 0 1 0 7.6M18.8 5.5a9 9 0 0 1 0 13"/></svg>
+              <span class="off-slash" aria-hidden="true"></span>
+            </button>
+            <button class="round-btn" id="soundBtn" type="button" aria-label="Музыка" title="Музыка">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.6"/><circle cx="16.5" cy="16" r="2.6"/></svg>
+              <span class="off-slash" aria-hidden="true"></span>
+            </button>
+            <button class="round-btn" id="fullscreenBtn" type="button" aria-label="На весь экран" title="На весь экран">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+            </button>
+            <button class="round-btn" id="pauseBtn" type="button" aria-label="Пауза" title="Пауза (Esc)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="friendship-hint is-hidden" id="friendshipHint">
+          <span class="friendship-hint__hearts" aria-hidden="true">♡ ♡</span>
+          <span>Лента дружбы натянулась — будьте ближе друг к другу!</span>
+        </div>
+
+        <div class="controls-row">
+          <div class="control-chip control-chip--ilya" id="ilyaChip">
+            <span class="control-chip__dot"></span>
+            <strong>Илюша</strong>
+            <span class="key-group"><kbd data-key="KeyW">W</kbd><kbd data-key="KeyA">A</kbd><kbd data-key="KeyS">S</kbd><kbd data-key="KeyD">D</kbd></span>
+            <span class="key-plus">+</span>
+            <kbd class="key-wide" data-key="Space">Пробел</kbd>
+          </div>
+          <div class="control-chip control-chip--alisa" id="alisaChip">
+            <span class="control-chip__dot"></span>
+            <strong>Алиса</strong>
+            <span class="key-group"><kbd data-key="ArrowLeft">←</kbd><kbd data-key="ArrowUp">↑</kbd><kbd data-key="ArrowDown">↓</kbd><kbd data-key="ArrowRight">→</kbd></span>
+            <span class="key-plus">+</span>
+            <kbd class="key-wide" data-key="Enter">Enter</kbd>
+          </div>
+        </div>
+      </div>
+
+      <div id="rainbowHud" class="rainbow-hud is-hidden" aria-live="polite">
+        <button class="rainbow-back" id="rainbowBackBtn" type="button" aria-label="Вернуться в меню">←</button>
+        <div class="rainbow-hud__title">Радужный сон</div>
+        <div class="rainbow-pill rainbow-pill--time"><span aria-hidden="true">⏰</span><strong id="rainbowTime">5:00</strong></div>
+        <div class="rainbow-pill"><span aria-hidden="true">💛</span><span class="rainbow-pill__label">Очки дружбы</span><strong id="rainbowScore">0</strong></div>
+        <div class="rainbow-pill"><span aria-hidden="true">🎨</span><strong id="rainbowZones">0 / 13</strong></div>
+      </div>
+
+      <div id="towerHud" class="rainbow-hud tower-hud is-hidden" aria-live="polite">
+        <button class="rainbow-back" id="towerBackBtn" type="button" aria-label="Вернуться в меню">←</button>
+        <div class="rainbow-hud__title">Лего-Башня</div>
+        <div class="rainbow-pill rainbow-pill--time"><span aria-hidden="true">⏰</span><strong id="towerTime">5:00</strong></div>
+        <div class="rainbow-pill"><span aria-hidden="true">🧱</span><span class="rainbow-pill__label">Этажи</span><strong id="towerHeight">0 эт.</strong></div>
+        <div class="rainbow-pill"><span aria-hidden="true">🏗️</span><span class="rainbow-pill__label">Этап</span><strong id="towerStage">Фундамент 0/5</strong></div>
+        <div class="rainbow-pill"><span aria-hidden="true">⭐</span><strong id="towerBlocks">0</strong></div>
+      </div>
+
+      <div id="oceanHud" class="rainbow-hud ocean-hud is-hidden" aria-live="polite">
+        <button class="rainbow-back" id="oceanBackBtn" type="button" aria-label="Вернуться в меню">←</button>
+        <div class="rainbow-hud__title">Подводная охота</div>
+        <div class="rainbow-pill"><span aria-hidden="true">🐠</span><span class="rainbow-pill__label">Рыбки</span><strong id="oceanFish">0 / 12</strong></div>
+        <div class="rainbow-pill"><span aria-hidden="true">💛</span><strong id="oceanHearts">0</strong></div>
+      </div>
+
+      <div id="forestHud" class="rainbow-hud forest-hud is-hidden" aria-live="polite">
+        <button class="rainbow-back" id="forestBackBtn" type="button" aria-label="Вернуться в меню">←</button>
+        <div class="rainbow-hud__title">Лесной оркестр</div>
+        <div class="rainbow-pill"><span aria-hidden="true">🌸</span><span class="rainbow-pill__label">Цветы</span><strong id="forestFlowers">0 / 16</strong></div>
+      </div>
+
+      <div id="chaseHud" class="rainbow-hud chase-hud is-hidden" aria-live="polite">
+        <button class="rainbow-back" id="chaseBackBtn" type="button" aria-label="Вернуться в меню">←</button>
+        <div class="rainbow-hud__title">Лесные прятки</div>
+        <div class="rainbow-pill"><span aria-hidden="true">🏁</span><strong id="chaseRound">Раунд 1/2</strong></div>
+        <div class="rainbow-pill"><span aria-hidden="true">👑</span><strong id="chaseRole">Водит Илюша</strong></div>
+        <div class="rainbow-pill rainbow-pill--time"><span aria-hidden="true">⏰</span><strong id="chaseTime">1:00</strong></div>
+        <div class="rainbow-pill"><span aria-hidden="true">⭐</span><strong id="chaseStars">0 : 0</strong></div>
+      </div>
+
+      <div id="volcanoHud" class="rainbow-hud volcano-hud is-hidden" aria-live="polite">
+        <button class="rainbow-back" id="volcanoBackBtn" type="button" aria-label="Вернуться в меню">←</button>
+        <div class="rainbow-hud__title">Вулкан</div>
+        <div class="rainbow-pill"><span aria-hidden="true">🧗</span><strong id="volcanoHeight">0 / 50</strong></div>
+        <div class="rainbow-pill"><span aria-hidden="true">🧱</span><strong id="volcanoBlocks">2 / 2</strong></div>
+        <div class="rainbow-pill"><span aria-hidden="true">🌋</span><strong id="volcanoLava">Лава</strong></div>
+        <div class="rainbow-pill volcano-hud__objective"><strong id="volcanoObjective">Стройте мосты</strong></div>
+      </div>
+
+      <div id="dialogue" class="dialogue is-hidden" role="status">
+        <canvas id="portraitCanvas" width="144" height="144" aria-hidden="true"></canvas>
+        <div class="dialogue__body">
+          <div class="dialogue__name" id="dialogueName">Мама</div>
+          <div class="dialogue__text" id="dialogueText"></div>
+        </div>
+        <button class="dialogue__next" id="dialogueNext" type="button" aria-label="Дальше">›</button>
+      </div>
+
+      <div id="towerDialogue" class="tower-dialogue is-hidden" role="status">
+        <span class="tower-dialogue__speaker" id="towerSpeaker">Мама</span>
+        <p class="tower-dialogue__text" id="towerText"></p>
+      </div>
+
+      <div id="oceanDialogue" class="tower-dialogue ocean-dialogue is-hidden" role="status">
+        <span class="tower-dialogue__speaker" id="oceanSpeaker">Мама</span>
+        <p class="tower-dialogue__text" id="oceanText"></p>
+      </div>
+
+      <div id="forestDialogue" class="tower-dialogue forest-dialogue is-hidden" role="status">
+        <span class="tower-dialogue__speaker" id="forestSpeaker">Мама</span>
+        <p class="tower-dialogue__text" id="forestText"></p>
+      </div>
+
+      <div id="chaseDialogue" class="tower-dialogue chase-dialogue is-hidden" role="status">
+        <span class="tower-dialogue__speaker" id="chaseSpeaker">Мама</span>
+        <p class="tower-dialogue__text" id="chaseText"></p>
+      </div>
+
+      <div id="volcanoDialogue" class="tower-dialogue volcano-dialogue is-hidden" role="status">
+        <span class="tower-dialogue__speaker" id="volcanoSpeaker">Мама</span>
+        <p class="tower-dialogue__text" id="volcanoText"></p>
+      </div>
+
+      <div id="toast" class="toast is-hidden" role="status">
+        <span class="toast__icon" id="toastIcon">✦</span>
+        <span id="toastText"></span>
+      </div>
+
+      <div class="screen start-screen" id="startScreen">
+        <div class="menu-shade"></div>
+        <div class="menu-brand" aria-label="ВремяОбнимашки. Хранители Снов">
+          <span class="menu-brand__top">ВремяОбнимашки</span>
+          <span class="menu-brand__bottom">Хранители Снов</span>
+        </div>
+
+        <div class="menu-control-hint menu-control-hint--left" aria-hidden="true">
+          <div class="menu-keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
+          <span>Илюша · 6</span>
+        </div>
+        <div class="menu-control-hint menu-control-hint--right" aria-hidden="true">
+          <div class="menu-keys"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd></div>
+          <span>Алиса · 8</span>
+        </div>
+
+        <button class="menu-object menu-object--chest" id="menuChest" type="button"
+          aria-label="Сундук с мини-играми" title="Сундук с мини-играми"
+          data-voice="Тут прячутся наши мини-игры!">
+          <svg viewBox="0 0 210 190" role="img" aria-hidden="true">
+            <defs>
+              <linearGradient id="chestBody" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ffb36b"/>
+                <stop offset="1" stop-color="#e46d63"/>
+              </linearGradient>
+              <linearGradient id="chestLid" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ffe29a"/>
+                <stop offset="1" stop-color="#e9a553"/>
+              </linearGradient>
+            </defs>
+            <ellipse cx="105" cy="177" rx="85" ry="13" fill="rgba(20,17,45,.32)"/>
+            <g transform="rotate(-13 65 82)">
+              <rect x="34" y="48" width="146" height="54" rx="20" fill="url(#chestLid)" stroke="#8d4e4c" stroke-width="4"/>
+              <rect x="42" y="57" width="130" height="12" rx="6" fill="rgba(255,255,255,.35)"/>
+            </g>
+            <g>
+              <rect x="52" y="80" width="24" height="24" rx="5" fill="#78c9e8" stroke="#3f7f9c" stroke-width="3"/>
+              <rect x="80" y="62" width="30" height="22" rx="5" fill="#8ddc9e" stroke="#498f62" stroke-width="3"/>
+              <rect x="116" y="78" width="27" height="27" rx="5" fill="#ffd56b" stroke="#a9762c" stroke-width="3"/>
+              <rect x="146" y="58" width="22" height="21" rx="5" fill="#f29ac1" stroke="#9d5476" stroke-width="3"/>
+              <circle cx="83" cy="75" r="16" fill="rgba(222,249,255,.75)" stroke="#9adcf0" stroke-width="3"/>
+              <circle cx="74" cy="69" r="4" fill="#fff"/>
+              <circle cx="142" cy="98" r="12" fill="rgba(255,224,237,.85)" stroke="#e8a4bc" stroke-width="3"/>
+              <path d="M104 70 q22 -15 43 4 q-8 27 -29 29 q-22 -4 -14 -33z" fill="#ffe9c9" stroke="#b98a67" stroke-width="3"/>
+            </g>
+            <rect x="37" y="102" width="136" height="68" rx="16" fill="url(#chestBody)" stroke="#914a4c" stroke-width="4"/>
+            <rect x="47" y="112" width="116" height="13" rx="7" fill="rgba(255,255,255,.3)"/>
+            <rect x="91" y="108" width="28" height="26" rx="8" fill="#ffe9a8" stroke="#ad7935" stroke-width="3"/>
+            <circle cx="105" cy="119" r="4" fill="#8d5b37"/>
+            <rect x="42" y="145" width="126" height="9" rx="4" fill="rgba(113,50,62,.22)"/>
+            <path d="M177 37 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#fff2ba"/>
+            <circle cx="29" cy="56" r="5" fill="#c9f3ff"/>
+            <circle cx="176" cy="87" r="4" fill="#ffd3e5"/>
+          </svg>
+        </button>
+
+        <button class="menu-object menu-object--door" id="menuDoor" type="button"
+          aria-label="Волшебная Дверь Сна" title="Волшебная Дверь Сна"
+          data-voice="Это Волшебная Дверь!">
+          <svg viewBox="0 0 230 310" role="img" aria-hidden="true">
+            <defs>
+              <linearGradient id="doorPlush" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#ffd2df"/>
+                <stop offset=".48" stop-color="#c7a9ea"/>
+                <stop offset="1" stop-color="#8b7fd4"/>
+              </linearGradient>
+              <linearGradient id="doorInner" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#fff4d0"/>
+                <stop offset="1" stop-color="#ffd7b0"/>
+              </linearGradient>
+              <radialGradient id="doorGlow" cx=".5" cy=".45" r=".55">
+                <stop offset="0" stop-color="rgba(255,244,188,.55)"/>
+                <stop offset="1" stop-color="rgba(255,244,188,0)"/>
+              </radialGradient>
+            </defs>
+            <ellipse cx="115" cy="298" rx="97" ry="12" fill="rgba(20,17,45,.32)"/>
+            <circle cx="115" cy="150" r="112" fill="url(#doorGlow)"/>
+            <path d="M32 296 L32 122 Q32 28 115 28 Q198 28 198 122 L198 296 Z" fill="url(#doorPlush)" stroke="#fff0cf" stroke-width="6"/>
+            <path d="M48 286 L48 123 Q48 46 115 46 Q182 46 182 123 L182 286 Z" fill="#a791db" opacity=".38"/>
+            <path d="M58 278 L58 124 Q58 60 115 60 Q172 60 172 124 L172 278 Z" fill="url(#doorInner)" stroke="#fff4d2" stroke-width="4"/>
+            <path d="M72 266 L72 126 Q72 78 115 78 Q158 78 158 126 L158 266 Z" fill="#fff9e6" opacity=".45"/>
+            <path d="M105 78 L105 266 M72 170 L158 170" stroke="rgba(174,119,91,.2)" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="162" cy="186" r="10" fill="#f6c85c" stroke="#a66e2f" stroke-width="3"/>
+            <path d="M115 178 q-9 10 0 24 q9 -14 0 -24z" fill="#6e5a9f"/>
+            <g opacity=".9">
+              <circle cx="88" cy="191" r="10" fill="#ffd9b8" stroke="#9b6f5a" stroke-width="2"/>
+              <path d="M78 218 q10 -19 20 0 l-2 23 h-16z" fill="#8ac7ee" stroke="#538bb2" stroke-width="2"/>
+              <circle cx="140" cy="180" r="11" fill="#ffd9b8" stroke="#9b6f5a" stroke-width="2"/>
+              <path d="M128 210 q12 -22 24 0 l-2 31 h-20z" fill="#f3a8c3" stroke="#b96989" stroke-width="2"/>
+              <path d="M98 213 q10 8 20 0" stroke="#9b6f5a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            </g>
+            <path d="M28 78 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3z" fill="#fff3b1"/>
+            <path d="M203 116 l2 7 7 2 -7 2 -2 7 -2 -7 -7 -2 7 -2z" fill="#d9f4ff"/>
+            <circle cx="42" cy="215" r="4" fill="#ffe3f0"/>
+            <circle cx="190" cy="224" r="4" fill="#fff0b8"/>
+          </svg>
+        </button>
+
+        <button class="menu-object menu-object--album" id="menuAlbum" type="button"
+          aria-label="Коллекция наклеек" title="Коллекция наклеек"
+          data-voice="Тут прячутся наши наклейки!">
+          <svg viewBox="0 0 180 220" role="img" aria-hidden="true">
+            <defs>
+              <linearGradient id="albumCover" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#f58b9f"/>
+                <stop offset="1" stop-color="#c95b83"/>
+              </linearGradient>
+            </defs>
+            <ellipse cx="90" cy="207" rx="68" ry="10" fill="rgba(20,17,45,.3)"/>
+            <rect x="24" y="18" width="136" height="184" rx="16" fill="#fff0d2" stroke="#b87572" stroke-width="4"/>
+            <rect x="14" y="10" width="142" height="184" rx="16" fill="url(#albumCover)" stroke="#8e4462" stroke-width="5"/>
+            <rect x="14" y="10" width="20" height="184" rx="8" fill="#9d4768"/>
+            <rect x="42" y="30" width="98" height="140" rx="13" fill="#ffe9cf" stroke="#e7b98e" stroke-width="3"/>
+            <circle cx="91" cy="92" r="38" fill="#d8a06e" stroke="#8f5b43" stroke-width="4"/>
+            <circle cx="58" cy="64" r="16" fill="#d8a06e" stroke="#8f5b43" stroke-width="4"/>
+            <circle cx="124" cy="64" r="16" fill="#d8a06e" stroke="#8f5b43" stroke-width="4"/>
+            <circle cx="58" cy="64" r="8" fill="#f4c9a5"/>
+            <circle cx="124" cy="64" r="8" fill="#f4c9a5"/>
+            <ellipse cx="91" cy="103" rx="24" ry="19" fill="#f6d3ac"/>
+            <circle cx="79" cy="88" r="4" fill="#4b3440"/>
+            <circle cx="103" cy="88" r="4" fill="#4b3440"/>
+            <ellipse cx="91" cy="100" rx="7" ry="5" fill="#5c3b3e"/>
+            <path d="M80 112 q11 10 22 0" stroke="#7b4b45" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <circle cx="70" cy="104" r="6" fill="rgba(235,125,128,.3)"/>
+            <circle cx="112" cy="104" r="6" fill="rgba(235,125,128,.3)"/>
+            <path d="M55 151 q35 16 72 0" stroke="#c98a62" stroke-width="3" fill="none"/>
+            <path d="M146 30 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3z" fill="#ffeaa6"/>
+            <path d="M145 151 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z" fill="#ffeaa6"/>
+            <circle cx="40" cy="178" r="4" fill="#ffe6b0"/>
+          </svg>
+        </button>
+
+        <div class="menu-hint" id="menuHint" aria-live="polite">
+          Нажми на Волшебную Дверь, чтобы отправиться в сказку
+        </div>
+        <button class="menu-help" id="howBtn" type="button" aria-label="Как играть" title="Как играть">?</button>
+        <button class="menu-fullscreen" id="menuFullscreenBtn" type="button" aria-label="Полный экран" title="Полный экран (F11)">⛶</button>
+        <div class="menu-footer">Илюше 6, Алисе 8 · без проигрышей</div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="howScreen">
+        <div class="modal how-card">
+          <button class="modal__close" id="howCloseBtn" type="button" aria-label="Закрыть">×</button>
+          <div class="modal__eyebrow">Два игрока — одна команда</div>
+          <h2>Как играть</h2>
+          <div class="how-players">
+            <div class="how-player how-player--ilya">
+              <div class="how-player__title"><span>Илюша</span><small>младший брат · 6 лет</small></div>
+              <div class="how-keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>идти</span><kbd>Пробел</kbd><span>фонарик / цвет</span></div>
+              <p>Сильный: толкает кубики-подушки, высоко прыгает и светит фонариком. В четвёртом сне <b>Пробел</b> меняет цвет луча, а прыжок — <b>W</b>.</p>
+            </div>
+            <div class="how-player how-player--alisa">
+              <div class="how-player__title"><span>Алиса</span><small>старшая сестра · 8 лет</small></div>
+              <div class="how-keys"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd><span>идти</span><kbd>Enter</kbd><span>прыжок / действие</span></div>
+              <p>Ловкая: выдувает волшебные мыльные пузыри и собирает светлячков.</p>
+            </div>
+          </div>
+          <div class="how-rules">
+            <div class="rule"><span class="rule__icon">♡</span><div><strong>Держитесь рядом</strong><p>Невидимая лента дружбы связывает ребят. Если отойти далеко, идти станет труднее.</p></div></div>
+            <div class="rule"><span class="rule__icon">✦</span><div><strong>Обнимайтесь вместе</strong><p>Встаньте рядом и зажмите <kbd>Пробел</kbd> + <kbd>Enter</kbd>. Объятия открывают Волшебную Дверь Сна.</p></div></div>
+            <div class="rule"><span class="rule__icon">☁</span><div><strong>Никаких проигрышей</strong><p>Если кто-то оступится, доброе облачко подхватит его и вернёт на мягкий пол.</p></div></div>
+          </div>
+          <button class="btn btn-primary btn--wide" id="howPlayBtn" type="button">Всё понятно, в сон!</button>
+        </div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="levelSelectScreen">
+        <div class="modal level-select-card">
+          <button class="modal__close" id="levelSelectClose" type="button" aria-label="Назад">×</button>
+          <div class="modal__eyebrow">Волшебная Дверь Сна</div>
+          <h2>Куда отправимся?</h2>
+          <div class="level-grid">
+            <button class="level-choice" type="button" data-level="0" data-voice="Первый сон. Остров разбросанных носков.">
+              <span class="level-choice__art level-choice__art--bear" aria-hidden="true">🐻</span>
+              <span class="level-choice__text"><strong>Сон 1</strong><small>Остров носков</small></span>
+              <span class="level-choice__star" aria-hidden="true">★</span>
+            </button>
+            <button class="level-choice" type="button" data-level="1" data-voice="Второй сон. Остров потерянных деталек Лего.">
+              <span class="level-choice__art level-choice__art--lego" aria-hidden="true">🧱</span>
+              <span class="level-choice__text"><strong>Сон 2</strong><small>Остров Лего</small></span>
+              <span class="level-choice__star" aria-hidden="true">★</span>
+            </button>
+            <button class="level-choice" type="button" data-level="2" data-voice="Третий сон. Лес книжных страниц.">
+              <span class="level-choice__art level-choice__art--book" aria-hidden="true">📖</span>
+              <span class="level-choice__text"><strong>Сон 3</strong><small>Лес страниц</small></span>
+              <span class="level-choice__star" aria-hidden="true">★</span>
+            </button>
+            <button class="level-choice" type="button" data-level="3" data-voice="Четвёртый сон. Поляна гигантских книжек-раскрасок.">
+              <span class="level-choice__art level-choice__art--bird" aria-hidden="true">🕊️</span>
+              <span class="level-choice__text"><strong>Сон 4</strong><small>Поляна раскрасок</small></span>
+              <span class="level-choice__star" aria-hidden="true">★</span>
+            </button>
+          </div>
+          <p class="modal-note">Можно выбрать любой сон — и отправиться в путь.</p>
+          <button class="rules-button" id="dreamRulesBtn" type="button">📖 Как играть в сны</button>
+        </div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="rulesScreen">
+        <div class="modal rules-card">
+          <button class="modal__close" id="rulesClose" type="button" aria-label="Назад">×</button>
+          <div class="modal__eyebrow" id="rulesEyebrow">Подсказка</div>
+          <h2 id="rulesTitle">Правила</h2>
+          <div class="rules-list" id="rulesList"></div>
+          <button class="btn btn-primary rules-ok" id="rulesOk" type="button">Всё понятно</button>
+        </div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="miniGamesScreen">
+        <div class="modal mini-games-card">
+          <button class="modal__close" id="miniClose" type="button" aria-label="Назад">×</button>
+          <div class="modal__eyebrow">Сундук с игрушками</div>
+          <h2>Мини-игры</h2>
+          <div class="mini-grid">
+            <button class="mini-choice" type="button" data-mini="lego" data-voice="Лего-Башня. Постройте самую высокую башню для Мишки!">
+              <span class="mini-choice__art" aria-hidden="true">🧱</span>
+              <strong>Лего-Башня</strong>
+              <small class="mini-choice__play">Играть</small>
+            </button>
+            <button class="mini-choice" type="button" data-mini="rainbow" data-voice="Радужный сон. Раскрасьте открытку вместе!">
+              <span class="mini-choice__art" aria-hidden="true">🌈</span>
+              <strong>Радужный сон</strong>
+              <small class="mini-choice__play">Играть</small>
+            </button>
+            <button class="mini-choice" type="button" data-mini="ocean" data-voice="Подводная охота за кляксами. Помогите рыбкам снова стать цветными!">
+              <span class="mini-choice__art" aria-hidden="true">🐠</span>
+              <strong>Подводная охота</strong>
+              <small class="mini-choice__play">Играть</small>
+            </button>
+            <button class="mini-choice" type="button" data-mini="forest" data-voice="Лесной оркестр цветов. Разбудите спящие цветы волшебными семенами!">
+              <span class="mini-choice__art" aria-hidden="true">🌸</span>
+              <strong>Лесной оркестр</strong>
+              <small class="mini-choice__play">Играть</small>
+            </button>
+            <button class="mini-choice" type="button" data-mini="chase" data-voice="Лесные прятки-догонялки. Два раунда весёлой погони на солнечной поляне!">
+              <span class="mini-choice__art" aria-hidden="true">🐇</span>
+              <strong>Лесные прятки</strong>
+              <small class="mini-choice__play">Играть</small>
+            </button>
+            <button class="mini-choice" type="button" data-mini="volcano" data-voice="Остров Вулкана и Лавовые Мостики. Стройте мосты и убегайте от карамельной лавы!">
+              <span class="mini-choice__art" aria-hidden="true">🌋</span>
+              <strong>Вулкан и мостики</strong>
+              <small class="mini-choice__play">Играть</small>
+            </button>
+          </div>
+          <p class="modal-note" id="miniNote">Шесть мини-игр уже ждут ребят: выбирайте, во что играть!</p>
+          <button class="rules-button" id="miniRulesBtn" type="button">📖 Правила мини-игр</button>
+        </div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="stickerScreen">
+        <div class="modal sticker-card">
+          <button class="modal__close" id="stickerClose" type="button" aria-label="Назад">×</button>
+          <div class="modal__eyebrow">Комната наград</div>
+          <h2>Коллекция наклеек</h2>
+          <div class="sticker-layout">
+            <div class="sticker-board" id="stickerBoard" aria-label="Альбом наклеек">
+              <div class="sticker-slot" data-sticker="bear"><span class="sticker-slot__art">🐻</span><span class="sticker-slot__empty">?</span></div>
+              <div class="sticker-slot" data-sticker="train"><span class="sticker-slot__art">🚂</span><span class="sticker-slot__empty">?</span></div>
+              <div class="sticker-slot" data-sticker="elephant"><span class="sticker-slot__art">🐘</span><span class="sticker-slot__empty">?</span></div>
+              <div class="sticker-slot" data-sticker="bird"><span class="sticker-slot__art">🕊️</span><span class="sticker-slot__empty">?</span></div>
+              <div class="sticker-slot" data-sticker="tower"><span class="sticker-slot__art">🧱</span><span class="sticker-slot__empty">?</span></div>
+              <div class="sticker-slot" data-sticker="rainbow"><span class="sticker-slot__art">🌈</span><span class="sticker-slot__empty">?</span></div>
+              <div class="sticker-slot" data-sticker="ocean"><span class="sticker-slot__art">🐠</span><span class="sticker-slot__empty">?</span></div>
+              <div class="sticker-slot" data-sticker="forest"><span class="sticker-slot__art">🌸</span><span class="sticker-slot__empty">?</span></div>
+              <div class="sticker-slot" data-sticker="bunny"><span class="sticker-slot__art">🐇</span><span class="sticker-slot__empty">?</span></div>
+              <div class="sticker-slot" data-sticker="balloon"><span class="sticker-slot__art">🎈</span><span class="sticker-slot__empty">?</span></div>
+            </div>
+            <div class="sticker-tray" id="stickerTray">
+              <button class="sticker-chip" type="button" data-sticker="bear">🐻<span>Мишка</span></button>
+              <button class="sticker-chip" type="button" data-sticker="train">🚂<span>Поезд</span></button>
+              <button class="sticker-chip" type="button" data-sticker="elephant">🐘<span>Слонёнок</span></button>
+              <button class="sticker-chip" type="button" data-sticker="bird">🕊️<span>Птица</span></button>
+              <button class="sticker-chip" type="button" data-sticker="tower">🧱<span>Башня</span></button>
+              <button class="sticker-chip" type="button" data-sticker="rainbow">🌈<span>Радуга</span></button>
+              <button class="sticker-chip" type="button" data-sticker="ocean">🐠<span>Рыбка</span></button>
+              <button class="sticker-chip" type="button" data-sticker="forest">🌸<span>Оркестр</span></button>
+              <button class="sticker-chip" type="button" data-sticker="bunny">🐇<span>Зайчик</span></button>
+              <button class="sticker-chip" type="button" data-sticker="balloon">🎈<span>Шар</span></button>
+            </div>
+          </div>
+          <div class="sticker-info" id="stickerInfo" aria-live="polite">
+            <span class="sticker-info__icon" id="stickerInfoIcon" aria-hidden="true">👆</span>
+            <p class="sticker-info__text" id="stickerInfoText">Наведи курсор на наклейку — она расскажет о себе.</p>
+          </div>
+          <p class="sticker-note" id="stickerNote">Пройди сон или мини-игру — и наклейка станет твоей.</p>
+        </div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="rainbowReward">
+        <div class="modal rainbow-reward-card">
+          <div class="rainbow-reward__medal" aria-hidden="true">💛</div>
+          <div class="modal__eyebrow">Сердечко открылось</div>
+          <h2>Праздничные наклейки!</h2>
+          <p class="rainbow-reward__text" id="rainbowRewardText">Вы раскрасили открытку вместе. Награда уже летит в альбом!</p>
+          <div class="rainbow-reward__sticker"><span aria-hidden="true">🌈</span><strong>Наклейка «Радужный сон»</strong></div>
+          <div class="modal-buttons">
+            <button class="btn btn-primary" id="rainbowAgainBtn" type="button">Ещё раз</button>
+            <button class="btn btn-ghost" id="rainbowMenuBtn" type="button">В меню</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="towerReward">
+        <div class="modal rainbow-reward-card tower-reward-card">
+          <div class="tower-reward__bear" aria-hidden="true">🧸</div>
+          <div class="modal__eyebrow">Мишка на вершине</div>
+          <h2>Башня до неба!</h2>
+          <p class="rainbow-reward__text" id="towerRewardText">Мишка достал звёздочку и говорит спасибо!</p>
+          <div class="rainbow-reward__sticker"><span aria-hidden="true">🧱</span><strong>Наклейка «Лего-Башня»</strong></div>
+          <div class="modal-buttons">
+            <button class="btn btn-primary" id="towerAgainBtn" type="button">Ещё раз</button>
+            <button class="btn btn-ghost" id="towerMenuBtn" type="button">В меню</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="oceanReward">
+        <div class="modal rainbow-reward-card ocean-reward-card">
+          <div class="ocean-reward__fish" aria-hidden="true">🐠</div>
+          <div class="modal__eyebrow">Океан снова сияет</div>
+          <h2>Все рыбки спасены!</h2>
+          <p class="rainbow-reward__text" id="oceanRewardText">Вы очистили океан и вернули рыбкам яркие краски!</p>
+          <div class="rainbow-reward__sticker"><span aria-hidden="true">🐠</span><strong>Наклейка «Радужная рыбка»</strong></div>
+          <div class="modal-buttons">
+            <button class="btn btn-primary" id="oceanAgainBtn" type="button">Ещё раз</button>
+            <button class="btn btn-ghost" id="oceanMenuBtn" type="button">В меню</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="forestReward">
+        <div class="modal rainbow-reward-card forest-reward-card">
+          <div class="forest-reward__flower" aria-hidden="true">🌸</div>
+          <div class="modal__eyebrow">Поляна поёт</div>
+          <h2>Лесной оркестр проснулся!</h2>
+          <p class="rainbow-reward__text" id="forestRewardText">Все цветы раскрылись и запели вместе с вами!</p>
+          <div class="rainbow-reward__sticker"><span aria-hidden="true">🌸</span><strong>Наклейка «Лесной оркестр»</strong></div>
+          <div class="modal-buttons">
+            <button class="btn btn-primary" id="forestAgainBtn" type="button">Ещё раз</button>
+            <button class="btn btn-ghost" id="forestMenuBtn" type="button">В меню</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="chaseReward">
+        <div class="modal rainbow-reward-card chase-reward-card">
+          <div class="chase-reward__bunny" aria-hidden="true">🐇</div>
+          <div class="modal__eyebrow">Два раунда позади</div>
+          <h2>Вот это забег!</h2>
+          <p class="rainbow-reward__text" id="chaseRewardText">Звёздочки Радости сложились в общую копилку!</p>
+          <div class="rainbow-reward__sticker"><span aria-hidden="true">🐇</span><strong>Наклейка «Зайчик-попрыгунчик»</strong></div>
+          <div class="modal-buttons">
+            <button class="btn btn-primary" id="chaseAgainBtn" type="button">Ещё раз</button>
+            <button class="btn btn-ghost" id="chaseMenuBtn" type="button">В меню</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="volcanoReward">
+        <div class="modal rainbow-reward-card volcano-reward-card">
+          <div class="volcano-reward__balloon" aria-hidden="true">🎈</div>
+          <div class="modal__eyebrow">Шар взлетает</div>
+          <h2>Настоящие чемпионы-строители!</h2>
+          <p class="rainbow-reward__text" id="volcanoRewardText">Вы построили путь к вершине и улетели от карамельной лавы.</p>
+          <div class="rainbow-reward__sticker"><span aria-hidden="true">🎈</span><strong>Наклейка «Воздушный Шар»</strong></div>
+          <div class="modal-buttons">
+            <button class="btn btn-primary" id="volcanoAgainBtn" type="button">Ещё раз</button>
+            <button class="btn btn-ghost" id="volcanoMenuBtn" type="button">В меню</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="exitLockScreen">
+        <div class="exit-card">
+          <div class="exit-lock" aria-hidden="true">🔒</div>
+          <div class="exit-ring" aria-hidden="true"><i></i></div>
+          <p>Удерживай <kbd>Esc</kbd>, чтобы закрыть игру</p>
+        </div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="goodnightScreen">
+        <div class="goodnight-card">
+          <div class="goodnight-moon" aria-hidden="true">☾</div>
+          <h2>Спокойной ночи!</h2>
+          <p>Игра засыпает. Можно закрыть вкладку.</p>
+        </div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="pauseScreen">
+        <div class="modal pause-card">
+          <div class="modal__eyebrow">Сон немножко подождёт</div>
+          <h2>Пауза</h2>
+          <p class="pause-text">Ребята отдыхают на облачке. Продолжайте, когда будете готовы.</p>
+          <div class="pause-controls">
+            <span><kbd>W A S D</kbd> Илюша</span>
+            <span><kbd>← ↑ ↓ →</kbd> Алиса</span>
+            <span><kbd>Пробел</kbd> + <kbd>Enter</kbd> обнимашки</span>
+          </div>
+          <div class="pause-buttons">
+            <button class="btn btn-primary" id="resumeBtn" type="button">Продолжить</button>
+            <button class="btn btn-ghost" id="restartLevelBtn" type="button">Сон сначала</button>
+            <button class="text-link" id="toMenuBtn" type="button">На главную</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen overlay is-hidden" id="completeScreen">
+        <div class="modal complete-card">
+          <div class="complete-glow" aria-hidden="true"></div>
+          <div class="complete-stars" aria-hidden="true">✦ ✧ ✦</div>
+          <div class="modal__eyebrow" id="completeEyebrow">Сон первый — пройден!</div>
+          <h2 id="completeTitle">Мишка вернулся домой!</h2>
+          <div class="reward-frame">
+            <canvas id="rewardCanvas" width="360" height="240" aria-hidden="true"></canvas>
+            <div class="reward-sparkles" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          </div>
+          <p class="complete-text" id="completeText">Какая дружная команда! Вы помогли друг другу, и Мишка снова с вами.</p>
+          <div class="complete-praise" id="completePraise"><span>♡</span> Обнимашки — лучшая награда</div>
+          <button class="btn btn-primary btn--wide" id="nextLevelBtn" type="button">Следующий сон</button>
+          <button class="text-link" id="replayBtn" type="button">Пройти этот сон ещё раз</button>
+        </div>
+      </div>
+
+      <div class="screen ending-screen is-hidden" id="endingScreen">
+        <div class="ending-shade"></div>
+        <div class="ending-content">
+          <div class="eyebrow"><span aria-hidden="true">✦</span> все четыре сна пройдены</div>
+          <h2 class="ending-title">Все сны пройдены!</h2>
+          <p class="ending-text">
+            Мишка, Лего-поезд, Слонёнок и Птица Счастья снова рядом. А самое главное
+            волшебство — это когда вы рядом друг с другом и помогаете друг другу.
+          </p>
+          <div class="ending-praise">«Отличная работа, Илюша и Алиса!»<small>— Мама</small></div>
+          <button class="btn btn-primary" id="playAgainBtn" type="button">Сыграть ещё раз</button>
+          <button class="text-link" id="endingMenuBtn" type="button">На главную</button>
+        </div>
+      </div>
+
+      <div class="fade-screen" id="fadeScreen" aria-hidden="true"></div>
+    </main>
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/scenery.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/rainbow.js"></script>
+  <script src="js/tower.js"></script>
+  <script src="js/ocean.js"></script>
+  <script src="js/forest.js"></script>
+  <script src="js/chase.js"></script>
+  <script src="js/volcano.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
