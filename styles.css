@@ -2256,3 +2256,48 @@ kbd {
     font-size: calc(9 * var(--u));
   }
 }
+
+/* Кнопка озвучки в главном меню */
+.menu-voice-toggle {
+  position: absolute;
+  z-index: 7;
+  left: calc(26 * var(--u));
+  bottom: calc(24 * var(--u));
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: calc(6 * var(--u));
+  min-height: calc(44 * var(--u));
+  padding: 0 calc(16 * var(--u));
+  border-radius: 999px;
+  border: 1px solid rgba(255, 236, 192, 0.32);
+  background: rgba(44, 40, 79, 0.72);
+  color: #fff4d2;
+  font-family: var(--font-round);
+  font-size: calc(13 * var(--u));
+  letter-spacing: calc(0.3 * var(--u));
+  cursor: pointer;
+  box-shadow: 0 calc(4 * var(--u)) calc(14 * var(--u)) rgba(27, 20, 50, 0.24);
+  transition: transform 0.18s, background 0.18s, color 0.18s, opacity 0.18s;
+}
+.menu-voice-toggle:hover,
+.menu-voice-toggle:focus-visible {
+  transform: translateY(calc(-3 * var(--u)));
+  background: rgba(255, 242, 207, 0.92);
+  color: #5a476a;
+  outline: none;
+}
+.menu-voice-toggle.is-off {
+  opacity: 0.78;
+  background: rgba(42, 35, 57, 0.8);
+  color: rgba(255, 244, 210, 0.68);
+}
+@media (max-width: 700px) {
+  .menu-voice-toggle {
+    left: calc(18 * var(--u));
+    bottom: calc(16 * var(--u));
+    min-height: calc(36 * var(--u));
+    padding: 0 calc(11 * var(--u));
+    font-size: calc(9.5 * var(--u));
+  }
+}

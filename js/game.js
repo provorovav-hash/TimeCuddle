@@ -188,6 +188,7 @@
     endingMenuBtn: $("endingMenuBtn"),
     soundBtn: $("soundBtn"),
     voiceBtn: $("voiceBtn"),
+    menuVoiceBtn: $("menuVoiceBtn"),
     fullscreenBtn: $("fullscreenBtn"),
     fadeScreen: $("fadeScreen"),
   };
@@ -378,6 +379,12 @@
     ui.voiceBtn.title = settings.voice ? "Выключить озвучку" : "Включить озвучку";
     ui.soundBtn.setAttribute("aria-label", settings.sound ? "Выключить музыку и звуки" : "Включить музыку и звуки");
     ui.voiceBtn.setAttribute("aria-label", settings.voice ? "Выключить озвучку" : "Включить озвучку");
+    if (ui.menuVoiceBtn) {
+      ui.menuVoiceBtn.textContent = settings.voice ? "🔊 Озвучка: вкл" : "🔇 Озвучка: выкл";
+      ui.menuVoiceBtn.classList.toggle("is-off", !settings.voice);
+      ui.menuVoiceBtn.setAttribute("aria-pressed", settings.voice ? "true" : "false");
+      ui.menuVoiceBtn.title = settings.voice ? "Отключить голосовую озвучку" : "Включить голосовую озвучку";
+    }
   }
 
   function ensureAudio() {
@@ -1344,7 +1351,7 @@
     {
       icon: "🌋",
       title: "Остров Вулкана и Лавовые Мостики",
-      text: "Оба героя одинаково ловкие: A/D и ←/→ — бег, W и ↑ — прыжок, S и ↓ — спрыгнуть с любой платформы или мостика. Короткое нажатие Пробела или Enter добывает блок, удержание 0.5 секунды ставит его. Выше первого шара готовых мостиков нет: стройте путь сами. У каждого есть летающий мостик. На второй зелёной платформе ждёт звездолёт для двоих: звёздочки светятся, блоки взрываются, а Пробел/Enter сажает звездолёт или сбрасывает подобранный блок на лаву.",
+      text: "Оба героя одинаково ловкие: A/D и ←/→ — бег, W и ↑ — прыжок, S и ↓ — спрыгнуть с любой платформы или мостика. Короткое нажатие Пробела или Enter добывает блок, удержание 0.5 секунды ставит его. Выше первого шара готовых мостиков нет: стройте путь сами. У каждого есть летающий мостик. На второй зелёной платформе ждёт звездолёт для двоих: он подбирает несобранные блоки, звёздочки светятся. Пока звездолёт летит, Пробел/Enter сбрасывает блоки. Посадка на корку — автоматически на S/↓; после посадки Пробел/Enter высаживает героев, а рядом со звездолётом — сажает обратно. Лава поднимается до второго зелёного поля и останавливается.",
       goal: "Подняться к Воздушному Шару и обняться в корзине.",
     },
   ];
@@ -3062,6 +3069,7 @@
     ui.endingMenuBtn.addEventListener("click", goToMenu);
     ui.soundBtn.addEventListener("click", toggleSound);
     ui.voiceBtn.addEventListener("click", toggleVoice);
+    if (ui.menuVoiceBtn) ui.menuVoiceBtn.addEventListener("click", toggleVoice);
     ui.fullscreenBtn.addEventListener("click", toggleFullscreen);
     ui.dialogueNext.addEventListener("click", () => dialogue.next());
     ui.dialogue.addEventListener("click", (event) => {

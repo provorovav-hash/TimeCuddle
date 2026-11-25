@@ -56,6 +56,7 @@
       basket: { x: 640, y: FIRST_SUMMIT_Y - 4 },
       basket2: { x: 640, y: SECOND_SUMMIT_Y - 4 },
       secondVisible: false,
+      secondUnlocked: false,
       flying: {
         x: 565, y: FIRST_SUMMIT_Y - 105, w: 150, h: 18,
         type: "flying", flying: true, rider: null, taken: false, owner: "ilya",
@@ -66,11 +67,10 @@
       },
       starship: {
         x: 950, y: SECOND_SUMMIT_Y - 48, w: 160, h: 50,
-        riding: false, cooldown: 0,
+        riding: false, cooldown: 0, onCrust: null, aboard: false,
       },
       starshipCargo: 0,
       fallingBlocks: [],
-      lavaPushT: 0,
       rideSaid: false,
       landSaid: false,
       starLineSaid: false,
@@ -105,6 +105,18 @@
       hintT: 8,
     };
     addWalls(s);
+    // Несобранные блоки на полках второй зелёной платформы.
+    for (const x of [300, 520, 760, 1040]) {
+      s.walls.push({
+        x,
+        y: SECOND_SUMMIT_Y - 46,
+        w: 44,
+        h: 44,
+        type: "shelf",
+        mineable: true,
+        shelf: true,
+      });
+    }
     s.platforms.push(s.flying);
     s.platforms.push(s.flying2);
     enqueue(s, "mama", "Ого, Вулкан проснулся! Это карамельная лава! Скорее наверх, к Воздушному Шару!", 3.6);
@@ -381,6 +393,8 @@
     const ship = s.starship;
     ship.riding = false;
     ship.cooldown = 2.5;
+    ship.onCrust = null;
+    ship.aboard = false;
     ship.x = clamp(ship.x, 220, W - 220);
     ship.y = SECOND_SUMMIT_Y - 48;
     for (const kind of ["ilya", "alisa"]) {
@@ -413,6 +427,11 @@
         : Math.min(SECOND_SUMMIT_Y - 20, s.lavaY - 40);
       ship.x = clamp(ship.x + dx, 60, W - 60);
       ship.y = clamp(ship.y + dy, SECOND_SUMMIT_Y - 620, lowest);
+      const touchedCrust = crustUnderShip(s, ship.x, ship.y);
+      if (touchedCrust) {
+        landOnCrust(s, touchedCrust);
+        return;
+      }
       s.players.ilya.x = ship.x - 38;
       s.players.ilya.y = ship.y;
       s.players.ilya.onGround = false;
@@ -422,6 +441,15 @@
       s.players.alisa.onGround = false;
       s.players.alisa.platform = null;
 
+      for (const wall of s.walls) {
+        if (wall.gone) continue;
+        if (dist(ship.x, ship.y, wall.x + wall.w / 2, wall.y + wall.h / 2) < 105) {
+          wall.gone = true;
+          s.starshipCargo++;
+          burst(s, wall.x + wall.w / 2, wall.y + wall.h / 2, ["#ffd36e", "#ffe68a", "#d9a9ff"], 20);
+          VO.Sound.sparkle();
+        }
+      }
       for (const star of s.stars) {
         if (!star.lit && dist(ship.x, ship.y, star.x, star.y) < 145) {
           star.lit = true;
@@ -446,8 +474,33 @@
         }
       }
       if (input.justPressed("Space") || input.justPressed("Enter")) {
-        if (s.starshipCargo > 0) throwStarshipBlock(s);
-        else landStarship(s);
+        if (starshipBlocks(s) > 0) {
+          throwStarshipBlock(s);
+        } else if (!findCrustBelow(s, ship.x, ship.y)) {
+          landStarship(s);
+        }
+      }
+      return;
+    }
+    if (!ship.riding && ship.onCrust) {
+      ship.y = ship.onCrust.y - (ship.aboard ? 40 : 70);
+      const wantsExit = input.justPressed("Space") || input.justPressed("Enter");
+      const wantsBoard = input.justPressed("Space") || input.justPressed("Enter");
+      if (ship.aboard) {
+        for (const kind of ["ilya", "alisa"]) {
+          const p = s.players[kind];
+          p.x = ship.x + (kind === "ilya" ? -38 : 38);
+          p.y = ship.y;
+          p.onGround = false;
+          p.platform = null;
+        }
+        if (wantsExit) disembarkCrust(s);
+      } else {
+        const near = ["ilya", "alisa"].every((kind) => {
+          const p = s.players[kind];
+          return Math.abs(p.x - ship.x) < 175 && Math.abs(p.y - ship.y) < 150;
+        });
+        if (near && wantsBoard) boardOnCrust(s);
       }
       return;
     }
@@ -456,10 +509,12 @@
     const alisa = s.players.alisa;
     const bothNear = ["ilya", "alisa"].every((kind) => {
       const p = s.players[kind];
-      return Math.abs(p.x - ship.x) < 155 && Math.abs(p.y - SECOND_SUMMIT_Y) < 70;
+      return Math.abs(p.x - ship.x) < 155 && Math.abs(p.y - ship.y) < 110;
     });
     if (bothNear) {
       ship.riding = true;
+      ship.onCrust = null;
+      ship.aboard = true;
       ship.y = SECOND_SUMMIT_Y - 110;
       if (!s.rideSaid) {
         s.rideSaid = true;
@@ -468,9 +523,76 @@
     }
   }
 
+  function starshipBlocks(s) {
+    return s.starshipCargo + s.players.ilya.blocks + s.players.alisa.blocks;
+  }
+
+  function crustUnderShip(s, x, y) {
+    return s.platforms.find((pl) =>
+      pl.crust && !pl.taken &&
+      x > pl.x - 30 && x < pl.x + pl.w + 30 &&
+      y >= pl.y - 42 && y <= pl.y + 12
+    ) || null;
+  }
+
+  function landOnCrust(s, crust) {
+    const ship = s.starship;
+    ship.riding = false;
+    ship.cooldown = 2.5;
+    ship.onCrust = crust;
+    ship.aboard = true;
+    ship.x = clamp(ship.x, crust.x + 40, crust.x + crust.w - 40);
+    ship.y = crust.y - 40;
+    for (const kind of ["ilya", "alisa"]) {
+      const p = s.players[kind];
+      p.x = ship.x + (kind === "ilya" ? -38 : 38);
+      p.y = ship.y;
+      p.vy = 0;
+      p.onGround = false;
+      p.platform = null;
+    }
+  }
+
+  function disembarkCrust(s) {
+    const ship = s.starship;
+    const crust = ship.onCrust;
+    if (!crust) return;
+    ship.aboard = false;
+    ship.y = crust.y - 70;
+    for (const kind of ["ilya", "alisa"]) {
+      const p = s.players[kind];
+      p.x = clamp(ship.x + (kind === "ilya" ? -38 : 38), crust.x + 18, crust.x + crust.w - 18);
+      p.y = crust.y;
+      p.vy = 0;
+      p.onGround = true;
+      p.platform = crust;
+      collectCrust(s, p, crust);
+    }
+  }
+
+  function boardOnCrust(s) {
+    const ship = s.starship;
+    if (!ship.onCrust) return;
+    const crust = ship.onCrust;
+    ship.riding = true;
+    ship.aboard = true;
+    ship.onCrust = null;
+    ship.y = crust.y - 90;
+    ship.x = clamp(ship.x, 60, W - 60);
+    for (const kind of ["ilya", "alisa"]) {
+      const p = s.players[kind];
+      p.x = ship.x + (kind === "ilya" ? -38 : 38);
+      p.y = ship.y;
+      p.onGround = false;
+      p.platform = null;
+    }
+  }
+
   function throwStarshipBlock(s) {
-    if (s.starshipCargo <= 0) return;
-    s.starshipCargo--;
+    if (starshipBlocks(s) <= 0) return false;
+    if (s.starshipCargo > 0) s.starshipCargo--;
+    else if (s.players.ilya.blocks > 0) s.players.ilya.blocks--;
+    else if (s.players.alisa.blocks > 0) s.players.alisa.blocks--;
     s.fallingBlocks.push({
       x: s.starship.x,
       y: s.starship.y + 28,
@@ -479,6 +601,65 @@
       h: 38,
     });
     VO.Sound.bump();
+    return true;
+  }
+
+  function collectCrust(s, p, crust) {
+    if (!crust || crust.loot <= 0 || crust.looted) return;
+    p.blocks += crust.loot;
+    crust.looted = true;
+    crust.loot = 0;
+    burst(s, crust.x + crust.w / 2, crust.y - 10, ["#ffd36e", "#ffe68a", "#9fd8ff"], 16);
+    VO.Sound.sparkle();
+  }
+
+  function findCrustBelow(s, x, y) {
+    const list = (s.platforms || []).filter((pl) =>
+      pl.crust && !pl.taken && pl.y > y + 35 && Math.abs(x - (pl.x + pl.w / 2)) < pl.w / 2 + 35
+    );
+    list.sort((a, b) => a.y - b.y);
+    return list[0] || null;
+  }
+
+  function stepOnCrust(s, p, crust) {
+    p.x = clamp(p.x, crust.x + 18, crust.x + crust.w - 18);
+    p.y = crust.y;
+    p.vy = 0;
+    p.onGround = true;
+    p.platform = crust;
+    collectCrust(s, p, crust);
+  }
+
+  function makeStep(s, x, y) {
+    const step = {
+      x: clamp(x - 38, 20, W - 96),
+      y,
+      w: 76,
+      h: 18,
+      type: "step",
+      placed: true,
+      gold: true,
+    };
+    s.platforms.push(step);
+    return step;
+  }
+
+  function makeCrust(s, b) {
+    const crust = {
+      x: clamp(b.x - 86, 20, W - 192),
+      y: s.lavaY,
+      w: 172,
+      h: 32,
+      type: "crust",
+      crust: true,
+      loot: 2,
+      looted: false,
+    };
+    s.platforms.push(crust);
+    makeStep(s, b.x, s.lavaY - 44);
+    burst(s, b.x, s.lavaY, ["#ffcf5c", "#ff8f4d", "#9fd8ff"], 32);
+    VO.Sound.soapPop();
+    return crust;
   }
 
   function updateFallingBlocks(s, dt) {
@@ -488,12 +669,13 @@
       b.vy += 900 * dt;
       b.y += b.vy * dt;
       for (const plat of s.platforms) {
-        if (plat.taken || plat.gone || plat.summit || plat.type === "ground") continue;
+        if (plat.taken || plat.gone || plat.crust || plat.summit || plat.type === "ground") continue;
         if (!(plat.placed || plat.type === "bridge" || plat.gold)) continue;
         if (prevY <= plat.y && b.y >= plat.y &&
           b.x + b.w / 2 > plat.x && b.x - b.w / 2 < plat.x + plat.w) {
           plat.taken = true;
           b.dead = true;
+          makeStep(s, b.x, plat.y - 20);
           burst(s, b.x, plat.y, ["#ffd36e", "#ff9f6e", "#fff4c4"], 24);
           VO.Sound.celebrate();
           break;
@@ -501,9 +683,7 @@
       }
       if (!b.dead && b.y >= s.lavaY) {
         b.dead = true;
-        s.lavaPushT = 3;
-        burst(s, b.x, s.lavaY, ["#ffcf5c", "#ff8f4d", "#fff4c4"], 28);
-        VO.Sound.soapPop();
+        makeCrust(s, b);
       }
     }
     s.fallingBlocks = s.fallingBlocks.filter((b) => !b.dead);
@@ -544,6 +724,13 @@
       p.platform = null;
       VO.Sound.bump();
       return;
+    }
+    if (input.justPressed(cfg.action)) {
+      const crust = findCrustBelow(s, p.x, p.y);
+      if (crust) {
+        stepOnCrust(s, p, crust);
+        return;
+      }
     }
     let speed = 230;
     if (p.platform && p.platform.type === "ice") speed = 460;
@@ -619,7 +806,8 @@
       p.onGround = false;
       if (!p.platform) p.platform = null;
     }
-    if (p.y >= s.lavaY && s.freezeT <= 0) {
+    if (p.y >= s.lavaY && s.freezeT <= 0 &&
+      !(p.platform && (p.platform.crust || p.platform.secondSummit))) {
       p.stuck = true;
       p.stuckT = 0;
       p.y = s.lavaY;
@@ -693,15 +881,20 @@
     }
     if (s.phase !== "play") return;
 
-    if (s.lavaPushT > 0) {
-      s.lavaPushT = Math.max(0, s.lavaPushT - dt);
-      s.lavaY += LAVA_SPEED * 1.15 * dt;
-    } else if (s.freezeT <= 0) {
-      s.lavaY -= LAVA_SPEED * dt;
+    if (s.freezeT <= 0) s.lavaY = Math.max(SECOND_SUMMIT_Y, s.lavaY - LAVA_SPEED * dt);
+    for (const plat of s.platforms) {
+      if (!plat.crust || plat.taken) continue;
+      const dy = s.lavaY - plat.y;
+      if (dy !== 0) {
+        plat.y = s.lavaY;
+        for (const p of Object.values(s.players)) {
+          if (p.platform === plat) p.y += dy;
+        }
+      }
     }
     updatePlatforms(s, dt);
     updateFallingBlocks(s, dt);
-    if (!s.starship.riding) {
+    if (!s.starship.riding && !s.starship.aboard) {
       updatePlayer(s, s.players.ilya, dt, input, { left: "KeyA", right: "KeyD", jump: "KeyW", drop: "KeyS", action: "Space" });
       updatePlayer(s, s.players.alisa, dt, input, { left: "ArrowLeft", right: "ArrowRight", jump: "ArrowUp", drop: "ArrowDown", action: "Enter" });
     }
@@ -712,14 +905,20 @@
     const ilya = s.players.ilya;
     const alisa = s.players.alisa;
     const height = clamp(Math.round(-Math.min(ilya.y, alisa.y) / STEP), 0, 50);
-    s.secondVisible = height >= 50;
+    if (height >= 50) s.secondUnlocked = true;
+    s.secondVisible = s.secondVisible || s.secondUnlocked;
     if (ilya.stuck) s.objective = "Илюша влип в карамель — вытащите его!";
     else if (alisa.stuck) s.objective = "Алиса влипла в карамель — вытащите её!";
     else if (s.starship.riding) {
-      s.objective = s.starshipCargo > 0
-        ? `Звездолёт: блоков ${s.starshipCargo} · Пробел/Enter — бросок на лаву`
-        : "Звездолёт: Пробел/Enter — посадка на зелёную платформу";
+      const blocks = starshipBlocks(s);
+      s.objective = blocks > 0
+        ? `Звездолёт: блоков ${blocks} · Пробел/Enter — бросок и ступенька`
+        : findCrustBelow(s, s.starship.x, s.starship.y)
+          ? "Звездолёт над коркой: S/↓ — сесть на неё"
+          : "Звездолёт: Пробел/Enter — посадка на зелёную платформу";
     }
+    else if (s.starship.aboard) s.objective = "Звездолёт на корке: Пробел/Enter — высадиться и собрать блоки";
+    else if (s.starship.onCrust) s.objective = "Рядом со звездолётом: Пробел/Enter — сесть обратно";
     else if (height < 20) s.objective = "Поднимайтесь к первому Воздушному Шару, стройте мосты";
     else if (height < 50) s.objective = `Высота ${height}/50 — второй шар появится на 50`;
     else s.objective = "Второй шар на высоте 50! Обнимитесь в корзине";
@@ -810,6 +1009,8 @@
     if (plat.type === "marshmallow") color = "#ffe3e8";
     if (plat.type === "popcorn") color = "#e96161";
     if (plat.type === "magnet") color = "#a982e8";
+    if (plat.type === "crust") color = "#a95745";
+    if (plat.type === "step") color = "#ffd36e";
     if (plat.flying) color = plat.owner === "alisa" ? "#ffb6d2" : "#ffe08a";
     if (plat.gold) color = "#ffd86a";
     ctx.fillStyle = color;
@@ -858,19 +1059,38 @@
       ctx.textAlign = "center";
       ctx.fillText(plat.owner === "alisa" ? "МОСТИК А" : "МОСТИК И", plat.x + plat.w / 2, y - 10);
     }
+    if (plat.type === "crust") {
+      ctx.fillStyle = "rgba(255, 236, 189, 0.45)";
+      for (let i = 0; i < 5; i++) {
+        ctx.fillRect(plat.x + 10 + i * 31, y + plat.h - 7, 18, 5);
+      }
+      if (!plat.looted) {
+        for (let i = 0; i < 2; i++) {
+          ctx.fillStyle = "#ffe68a";
+          ctx.fillRect(plat.x + 26 + i * 88, y - 22, 20, 20);
+          ctx.strokeStyle = "#9b6b3d";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(plat.x + 26 + i * 88, y - 22, 20, 20);
+        }
+      }
+    }
   }
 
   function drawWall(ctx, s, w) {
     if (w.gone) return;
     const y = screenY(s, w.y);
     if (y > H + 50 || y < -60) return;
-    ctx.fillStyle = w.type === "sand" ? "#e0bc7b" : "#8f9aa0";
+    ctx.fillStyle = w.type === "sand" ? "#e0bc7b" : w.type === "shelf" ? "#d9a9ff" : "#8f9aa0";
     ctx.fillRect(w.x, y, w.w, w.h);
     ctx.strokeStyle = "rgba(70, 48, 40, 0.4)";
     ctx.lineWidth = 2;
     ctx.strokeRect(w.x, y, w.w, w.h);
     ctx.fillStyle = "rgba(255,255,255,0.18)";
     ctx.fillRect(w.x + 5, y + 5, w.w - 10, 5);
+    if (w.shelf) {
+      ctx.fillStyle = "#9a6b42";
+      ctx.fillRect(w.x - 6, y + w.h, w.w + 12, 6);
+    }
   }
 
   function drawPlayer(ctx, s, p) {
